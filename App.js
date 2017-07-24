@@ -1,37 +1,38 @@
 import React from 'react';
 import { AsyncStorage, StyleSheet, Text, View, FlatList, Switch, Button } from 'react-native';
 import {Header, AddTaskForm} from './components'
+import store from './todoStore'
+import actions from './actions';
 
 export default class App extends React.Component {
-  state = {
-    todos:[]
-  }
-  async componentDidMount() {
-    const todos = await AsyncStorage.getItem('todos')
-    if (todos) {
-      this.setState({todos:JSON.parse(todos)})
+  
+  constructor(props) {
+    super(props)
+    this.state = {
+      todos : []
     }
-  }
-  addTask = (name) => {
-    this.setState({todos:[...this.state.todos, {id:new Date(), name}]}, this.updateStorage)
-  }
-  async updateStorage() {
-    try {
-      await AsyncStorage.setItem('todos', JSON.stringify(this.state.todos))
-    } catch (error) {
-      alert(error.message)      
-    }
-  }
-  doneTask = (item) => {
-    item.done = !item.done;
-    this.setState({todos:[...this.state.todos]}, this.updateStorage)
-  }
-  removeTask = (item) => {
-    const newItems = this.state.todos.filter(todoItem => {
-      return item.id != todoItem.id
+    store.subscribe(() => {
+      this.setState({todos:store.getState()})
+      AsyncStorage.setItem('todos', JSON.stringify(store.getState()))
     })
-    this.setState({todos: newItems}, this.updateStorage)
   }
+
+  componentDidMount() {
+    actions.loadTasks()
+  }
+
+  addTask = (name) => {
+    actions.addTask(name)
+  }  
+  
+  doneTask = (item) => {
+    actions.doneTask(item)
+  }
+  
+  removeTask = (item) => {
+    actions.removeTask(item)
+  }
+  
   renderItem = ({item}) => (
     <View style={styles.item}>
       <Switch value={item.done}
@@ -43,7 +44,9 @@ export default class App extends React.Component {
         <Button color="red" title="X" onPress={()=>this.removeTask(item)}></Button>
     </View>
   )
+  
   extractor = (item) => item.id
+  
   render() {
     return (
       <View style={styles.container}>
@@ -60,6 +63,7 @@ export default class App extends React.Component {
       </View>
     );
   }
+  
 }
 
 const styles = StyleSheet.create({
